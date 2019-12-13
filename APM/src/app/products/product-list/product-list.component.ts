@@ -14,14 +14,14 @@ import { Product } from '../product';
 })
 export class ProductListComponent implements OnInit {
   pageTitle = 'Products';
+
   error$ = new Subject<string>();
 
-  products$: Observable<Product[]> = this.productService.productsWithCategory$
-    .pipe(
-      catchError(error => {
-        this.error$.next(error);
-        return of(null);
-      }));
+  products$: Observable<Product[]> = this.productService.productsWithCategory$.pipe(
+    catchError(error => {
+      this.error$.next(error);
+      return of(null);
+  }));
 
   selectedProduct$ = this.productService.selectedProduct$;
 
