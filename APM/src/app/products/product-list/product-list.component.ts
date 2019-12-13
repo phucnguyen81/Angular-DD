@@ -25,13 +25,18 @@ export class ProductListComponent implements OnInit {
 
   selectedProduct$ = this.productService.selectedProduct$;
 
-  vm$ = combineLatest(
-    [this.products$, this.selectedProduct$]
-  )
-    .pipe(
-      map(([products, product]: [Product[], Product]) =>
-        ({ products, productId: product ? product.id : 0 }))
-    );
+  vm$ = combineLatest(this.products$, this.selectedProduct$).pipe(
+    map(([products, product]: [Product[], Product]) => {
+      const productId = product ? product.id : 0;
+      const productViews = products.map(prod => ({
+          id: prod.id,
+          name: prod.productName,
+          category: prod.category,
+          ngClass: {active: (prod.id === productId)},
+        }));
+      return {products: productViews, productId};
+    })
+  );
 
   constructor(
     private route: ActivatedRoute,
