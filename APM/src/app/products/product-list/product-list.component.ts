@@ -59,7 +59,7 @@ export class ProductListComponent implements OnInit {
 
   selectedProductId$ = this.productService.selectedProduct$.pipe(
     filter(product => !!product),
-    map(product => ({type: 'selectedProductId' value: product.id}))
+    map(product => ({type: 'selectedProductId', value: product.id}))
   );
 
   // products combined with their categories
