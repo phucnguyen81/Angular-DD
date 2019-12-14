@@ -2,10 +2,10 @@ import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 
 import {
-  merge, of, Subject, ReplaySubject, Observable, combineLatest
+  Observable, Subject, ReplaySubject, merge, of
 } from 'rxjs';
 import {
-  catchError, distinctUntilChanged, filter, map, mapTo, tap, startWith, skipWhile, scan
+  catchError, distinctUntilChanged, filter, map, mapTo, tap, startWith, scan
 } from 'rxjs/operators';
 
 import { ProductService } from '../product.service';
