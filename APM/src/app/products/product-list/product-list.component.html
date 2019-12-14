@@ -1,21 +1,23 @@
+<ng-container *ngIf="views$ | async as view">
 <div class="card">
   <div class="card-header">
-    {{pageTitle}}
+    {{view.pageTitle}}
   </div>
 
-  <div class='card-body' *ngIf="vm$ | async as vm">
+  <div class='card-body'>
     <div class='list-group'>
       <button type='button'
               class='list-group-item'
-              *ngFor='let product of vm.products'
+              *ngFor='let product of view.products'
               [ngClass]="product.ngClass"
-              (click)='onSelected(product.id)'>
+              (click)='selectProduct(product.id)'>
         {{ product.name }} ({{ product.category }})
       </button>
     </div>
   </div>
 </div>
 
-<div class="alert alert-danger"
-     *ngIf="error$ | async as error">{{error}}
+<div class="alert alert-danger" *ngIf="view.error">
+  {{view.error}}
 </div>
+</ng-container>

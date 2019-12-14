@@ -1,8 +1,8 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 
-import { of, Subject, Observable, combineLatest } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { merge, of, Subject, ReplaySubject, Observable, combineLatest } from 'rxjs';
+import { catchError, map, tap, startWith, skipWhile, scan } from 'rxjs/operators';
 
 import { ProductService } from '../product.service';
 import { Product } from '../product';
@@ -13,30 +13,61 @@ import { Product } from '../product';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductListComponent implements OnInit {
-  pageTitle = 'Products';
 
-  error$ = new Subject<string>();
+  pageTitle$ = of('Products');
 
+  errorSensor$ = new Subject<string>();
+
+  // products combined with their categories
   products$: Observable<Product[]> = this.productService.productsWithCategory$.pipe(
     catchError(error => {
-      this.error$.next(error);
+      this.errorSensor$.next(error);
       return of(null);
   }));
 
-  selectedProduct$ = this.productService.selectedProduct$;
-
-  vm$ = combineLatest(this.products$, this.selectedProduct$).pipe(
-    map(([products, product]: [Product[], Product]) => {
-      const productId = product ? product.id : 0;
-      const productViews = products.map(prod => ({
-          id: prod.id,
-          name: prod.productName,
-          category: prod.category,
-          ngClass: {active: (prod.id === productId)},
-        }));
-      return {products: productViews, productId};
+  selectedProductSensor$ = new ReplaySubject<number | null>(1);
+  selectedProductActuator$ = this.selectedProductSensor$.pipe(
+    tap((productId) => {
+      // Modify the URL to support deep linking
+      this.router.navigate(['/products', productId]);
+      this.productService.changeSelectedProduct(productId);
     })
   );
+
+  events$ = merge(
+    this.pageTitle$.pipe(map(pageTitle => ({pageTitle}))),
+    this.errorSensor$.pipe(map(error => ({error}))),
+    this.products$.pipe(map(products => ({products}))),
+    this.productService.selectedProduct$.pipe(
+      map(selectedProduct => ({selectedProduct}))
+    ),
+    this.selectedProductActuator$.pipe(
+      map(selectedProductId => ({selectedProductId}))
+    )
+  );
+
+  states$ = this.events$.pipe(
+    scan<any,any>(
+      (state, event) => ({...state, ...event}), {}
+    )
+  );
+
+  views$ = this.states$.pipe(map(state => {
+    const product = state.selectedProduct;
+    const productId = product ? product.id : state.selectedProductId;
+    const products = state.products || [];
+    const productViews = products.map(prod => ({
+        id: prod.id,
+        name: prod.productName,
+        category: prod.category,
+        ngClass: {active: (prod.id === productId)},
+    }));
+    return {
+      pageTitle: state.pageTitle,
+      error: state.error,
+      products: productViews
+    };
+  });
 
   constructor(
     private route: ActivatedRoute,
@@ -48,12 +79,12 @@ export class ProductListComponent implements OnInit {
     // Read the parameter from the route - supports deep linking
     this.route.paramMap.subscribe(params => {
       const id = +params.get('id');
-      this.productService.changeSelectedProduct(id);
+      this.selectedProductSensor$.next(id);
     });
   }
 
-  onSelected(productId: number): void {
-    // Modify the URL to support deep linking
-    this.router.navigate(['/products', productId]);
+  selectProduct(productId: number): void {
+    this.selectedProductSensor$.next(productId);
   }
+
 }
