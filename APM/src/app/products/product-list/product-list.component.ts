@@ -16,6 +16,7 @@ import { ProductService } from '../product.service';
 import { Product } from '../product';
 
 import { nextState } from './product-list.state';
+import { ProductListControl } from './product-list.control';
 
 @Component({
   selector: 'pm-product-list',
@@ -26,67 +27,12 @@ export class ProductListComponent implements OnInit, OnDestroy {
 
   cancel$ = new Subject<any>();
 
-  // input port for external events
-  inputPort$ = new Subject<any>();
-
-  // output port
-  output$ = new ReplaySubject<any>(1);
-
-  // Read the parameter from the route - supports deep linking.
-  // Selected product id that comes from the route parameter.
-  productIdFromRoute$ = this.route.paramMap.pipe(
-    map(params => +params.get('id')),
-    map(productId => ({type: 'selectedProductId', value: productId}))
-  );
-
-  // Selected product id that comes from the service.
-  selectedProductId$ = this.productService.selectedProduct$.pipe(
-    filter(product => !!product),
-    map(product => ({type: 'selectedProductId', value: product.id}))
-  );
-
-  // products combined with their categories
-  products$ = this.productService.productsWithCategory$.pipe(
-    map(products => ({type: 'products', value: products})),
-    catchError(error => {
-      this.inputPort$.next({error});
-      return of(null);
-  }));
-
-  // side-effect, open loop, no feedback
-  selectProductAction$ = this.output$.pipe(
-    distinctUntilChanged(
-      (oldState, newState) => (
-        oldState.selectedProductId === newState.selectedProductId
-      )
-    ),
-    tap((state) => {
-      const productId = state.selectedProductId;
-      if (productId) {
-        // Modify the URL to support deep linking
-        this.router.navigate(['/products', productId]);
-        this.productService.changeSelectedProduct(productId);
-      }
-    }),
-    skipWhile(() => true)   // no feedback
-  );
-
-  // all inputs
-  input$ = merge(
-    this.inputPort$,
-    this.products$,
-    this.productIdFromRoute$,
-    this.selectedProductId$,
-    this.selectProductAction$,
-  );
-
-  // state reduced from inputs
-  state$ = this.input$.pipe(
-    scan<any,any>(nextState, {})
+  control$ = new ProductListControl(
+    this.route, this.router, this.productService
   );
 
   // transform state to view for display
-  view$ = this.output$.pipe(map(state => {
+  view$ = this.control$.output$.pipe(map(state => {
     const selectedId = state.selectedProductId;
     const products = state.products || [];
     const productViews = products.map(product => ({
@@ -109,13 +55,8 @@ export class ProductListComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
-    this.state$.pipe(
-      takeUntil(this.cancel$)
-    ).subscribe(this.output$);
-
-    this.inputPort$.next({
-      type: 'pageTitle', value: 'Products'
-    });
+    this.control$.initUntil(this.cancel$);
+    this.control$.send('pageTitle', 'Products');
   }
 
   ngOnDestroy(): void {
@@ -124,9 +65,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
   }
 
   selectProduct(productId: number): void {
-    this.inputPort$.next({
-      type: 'selectedProductId', value: productId
-    });
+    this.control$.send('selectedProductId', productId);
   }
 
 }
