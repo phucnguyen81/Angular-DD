@@ -76,6 +76,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
     this.inputEvent$,
     this.products$,
     this.selectedProductId$,
+    this.productIdFromRoute$,
     this.selectedProductActuator$,
   );
 
@@ -111,10 +112,6 @@ export class ProductListComponent implements OnInit, OnDestroy {
     this.state$.pipe(
       takeUntil(this.cancel$)
     ).subscribe(this.output$);
-
-    this.productIdFromRoute$.pipe(
-      takeUntil(this.cancel$)
-    ).subscribe(this.inputEvent$);
 
     this.inputEvent$.next({
       type: 'pageTitle', value: 'Products'
