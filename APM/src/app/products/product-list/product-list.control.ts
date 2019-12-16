@@ -10,7 +10,6 @@ import {
 } from 'rxjs/operators';
 
 import { ProductService } from '../product.service';
-import { Product } from '../product';
 
 import { nextState } from './product-list.state';
 
@@ -19,7 +18,7 @@ export class ProductListControl {
   // input port for external events
   inputPort$ = new Subject<any>();
 
-  // output port
+  // state as output
   output$ = new ReplaySubject<any>(1);
 
   // Read the parameter from the route - supports deep linking.
@@ -93,6 +92,12 @@ export class ProductListControl {
 
   send(type: string, value: any): void {
     this.inputPort$.next({type, value});
+  }
+
+  selectProduct(productId: number): void {
+    this.inputPort$.next({
+      type: 'selectedProductId', value: productId
+    });
   }
 
 }

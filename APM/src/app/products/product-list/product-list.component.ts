@@ -4,18 +4,10 @@ import {
 
 import { Router, ActivatedRoute } from '@angular/router';
 
-import {
-  Observable, Subject, ReplaySubject, merge, of
-} from 'rxjs';
-import {
-  catchError, distinctUntilChanged, filter, map, mapTo, tap, startWith,
-  scan, takeUntil, skipWhile
-} from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import { ProductService } from '../product.service';
-import { Product } from '../product';
-
-import { nextState } from './product-list.state';
 import { ProductListControl } from './product-list.control';
 
 @Component({
@@ -27,12 +19,12 @@ export class ProductListComponent implements OnInit, OnDestroy {
 
   cancel$ = new Subject<any>();
 
-  control$ = new ProductListControl(
+  productList$ = new ProductListControl(
     this.route, this.router, this.productService
   );
 
-  // transform state to view for display
-  view$ = this.control$.output$.pipe(map(state => {
+  // Transform state to view for display
+  view$ = this.productList$.output$.pipe(map(state => {
     const selectedId = state.selectedProductId;
     const products = state.products || [];
     const productViews = products.map(product => ({
@@ -55,8 +47,8 @@ export class ProductListComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
-    this.control$.initUntil(this.cancel$);
-    this.control$.send('pageTitle', 'Products');
+    this.productList$.initUntil(this.cancel$);
+    this.productList$.send('pageTitle', 'Products');
   }
 
   ngOnDestroy(): void {
@@ -65,7 +57,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
   }
 
   selectProduct(productId: number): void {
-    this.control$.send('selectedProductId', productId);
+    this.productList$.selectProduct(productId);
   }
 
 }
