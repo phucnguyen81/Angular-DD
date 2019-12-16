@@ -1,12 +1,9 @@
-// TODO decouple Router from control
-import { Router, ActivatedRoute } from '@angular/router';
-
 import {
   Observable, Subject, ReplaySubject, merge, of
 } from 'rxjs';
 
 import {
-  catchError, distinctUntilChanged, filter, map, mapTo, tap, startWith,
+  catchError, distinctUntilChanged, map, tap,
   scan, takeUntil, skipWhile
 } from 'rxjs/operators';
 
@@ -37,7 +34,7 @@ export class ProductListControl {
         oldState.selectedProductId === newState.selectedProductId
       )
     ),
-    tap((state) => this.onSelectedId(state.selectedProductId)),
+    tap((state) => this.doOnSelectedProduct(state.selectedProductId)),
     skipWhile(() => true)   // no feedback
   );
 
@@ -57,7 +54,7 @@ export class ProductListControl {
   constructor(
     private productService: ProductService,
     private selectedProductId$: Observable<any>,
-    private onSelectedId: number => void
+    private doOnSelectedProduct: number => void
   ) { }
 
   initUntil(cancel$: Observable<any>): void {

@@ -37,13 +37,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
   productList$ = new ProductListControl(
     this.productService,
     this.selectedProductId$,
-    (productId: number) => {
-      if (productId) {
-        // Modify the URL to support deep linking
-        this.router.navigate(['/products', productId]);
-        this.productService.changeSelectedProduct(productId);
-      }
-    }
+    (productId: number) => this.doOnSelectedProduct(productId)
   );
 
   // Transform state to view for display
@@ -81,6 +75,14 @@ export class ProductListComponent implements OnInit, OnDestroy {
 
   selectProduct(productId: number): void {
     this.productList$.selectProduct(productId);
+  }
+
+  doOnSelectedProduct(productId: number): void {
+    if (productId) {
+      // Modify the URL to support deep linking
+      this.router.navigate(['/products', productId]);
+      this.productService.changeSelectedProduct(productId);
+    }
   }
 
 }
