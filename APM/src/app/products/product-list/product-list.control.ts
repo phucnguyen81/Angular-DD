@@ -23,15 +23,20 @@ export class ProductListControl {
 
   // Read the parameter from the route - supports deep linking.
   // Selected product id that comes from the route parameter.
-  productIdFromRoute$ = this.route.paramMap.pipe(
+  selectedProductIdFromRoute$ = this.route.paramMap.pipe(
     map(params => +params.get('id')),
     map(productId => ({type: 'selectedProductId', value: productId}))
   );
 
   // Selected product id that comes from the service.
-  selectedProductId$ = this.productService.selectedProduct$.pipe(
+  selectedProductIdFromService$ = this.productService.selectedProduct$.pipe(
     filter(product => !!product),
     map(product => ({type: 'selectedProductId', value: product.id}))
+  );
+
+  selectedProductId$ = merge(
+    this.selectedProductIdFromRoute$,
+    this.selectedProductIdFromService$
   );
 
   // products combined with their categories
@@ -43,7 +48,7 @@ export class ProductListControl {
   }));
 
   // side-effect, open loop, no feedback
-  selectProductAction$ = this.output$.pipe(
+  selectedProductAction$ = this.output$.pipe(
     distinctUntilChanged(
       (oldState, newState) => (
         oldState.selectedProductId === newState.selectedProductId
@@ -64,9 +69,8 @@ export class ProductListControl {
   input$ = merge(
     this.inputPort$,
     this.products$,
-    this.productIdFromRoute$,
     this.selectedProductId$,
-    this.selectProductAction$,
+    this.selectedProductAction$,
   );
 
   // state reduced from inputs
