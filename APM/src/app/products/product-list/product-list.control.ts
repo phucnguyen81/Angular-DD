@@ -1,3 +1,4 @@
+// TODO decouple Router from control
 import { Router, ActivatedRoute } from '@angular/router';
 
 import {
@@ -21,24 +22,6 @@ export class ProductListControl {
   // state as output
   output$ = new ReplaySubject<any>(1);
 
-  // Read the parameter from the route - supports deep linking.
-  // Selected product id that comes from the route parameter.
-  selectedProductIdFromRoute$ = this.route.paramMap.pipe(
-    map(params => +params.get('id')),
-    map(productId => ({type: 'selectedProductId', value: productId}))
-  );
-
-  // Selected product id that comes from the service.
-  selectedProductIdFromService$ = this.productService.selectedProduct$.pipe(
-    filter(product => !!product),
-    map(product => ({type: 'selectedProductId', value: product.id}))
-  );
-
-  selectedProductId$ = merge(
-    this.selectedProductIdFromRoute$,
-    this.selectedProductIdFromService$
-  );
-
   // products combined with their categories
   products$ = this.productService.productsWithCategory$.pipe(
     map(products => ({type: 'products', value: products})),
@@ -54,14 +37,7 @@ export class ProductListControl {
         oldState.selectedProductId === newState.selectedProductId
       )
     ),
-    tap((state) => {
-      const productId = state.selectedProductId;
-      if (productId) {
-        // Modify the URL to support deep linking
-        this.router.navigate(['/products', productId]);
-        this.productService.changeSelectedProduct(productId);
-      }
-    }),
+    tap((state) => this.onSelectedId(state.selectedProductId)),
     skipWhile(() => true)   // no feedback
   );
 
@@ -79,9 +55,9 @@ export class ProductListControl {
   );
 
   constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private productService: ProductService
+    private productService: ProductService,
+    private selectedProductId$: Observable<any>,
+    private onSelectedId: number => void
   ) { }
 
   initUntil(cancel$: Observable<any>): void {

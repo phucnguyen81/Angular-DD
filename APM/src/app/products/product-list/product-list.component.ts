@@ -4,8 +4,8 @@ import {
 
 import { Router, ActivatedRoute } from '@angular/router';
 
-import { Subject } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, Subject, merge } from 'rxjs';
+import { filter, map } from 'rxjs/operators';
 
 import { ProductService } from '../product.service';
 import { ProductListControl } from './product-list.control';
@@ -19,8 +19,31 @@ export class ProductListComponent implements OnInit, OnDestroy {
 
   cancel$ = new Subject<any>();
 
+  selectedProductIdFromRoute$ = this.route.paramMap.pipe(
+    map(params => +params.get('id')),
+    map(productId => ({type: 'selectedProductId', value: productId}))
+  );
+
+  selectedProductIdFromService$ = this.productService.selectedProduct$.pipe(
+    filter(product => !!product),
+    map(product => ({type: 'selectedProductId', value: product.id}))
+  );
+
+  selectedProductId$: Observable<any> = merge(
+    this.selectedProductIdFromRoute$,
+    this.selectedProductIdFromService$
+  );
+
   productList$ = new ProductListControl(
-    this.route, this.router, this.productService
+    this.productService,
+    this.selectedProductId$,
+    (productId: number) => {
+      if (productId) {
+        // Modify the URL to support deep linking
+        this.router.navigate(['/products', productId]);
+        this.productService.changeSelectedProduct(productId);
+      }
+    }
   );
 
   // Transform state to view for display
