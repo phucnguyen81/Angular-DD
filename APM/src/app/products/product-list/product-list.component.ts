@@ -1,46 +1,39 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component, OnInit, OnDestroy, ChangeDetectionStrategy
+} from '@angular/core';
+
 import { Router, ActivatedRoute } from '@angular/router';
 
 import {
   Observable, Subject, ReplaySubject, merge, of
 } from 'rxjs';
 import {
-  catchError, distinctUntilChanged, filter, map, mapTo, tap, startWith, scan
+  catchError, distinctUntilChanged, filter, map, mapTo, tap, startWith,
+  scan, takeUntil, skipWhile
 } from 'rxjs/operators';
 
 import { ProductService } from '../product.service';
 import { Product } from '../product';
 
-function nextState(state, event): any {
-  switch(event.type) {
-    case 'pageTitle':
-      return {...state, 'pageTitle': event.value};
-    case 'error':
-      return {...state, 'error': event.value};
-    case 'products':
-      return {...state, 'products': event.value};
-    case 'selectedProductId':
-      return {...state, 'selectedProductId': event.value};
-    default:
-      return state;
-  }
-}
+import { nextState } from './product-list.state';
 
 @Component({
   selector: 'pm-product-list',
   templateUrl: './product-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProductListComponent implements OnInit {
+export class ProductListComponent implements OnInit, OnDestroy {
 
-  // collect internal events from inside the component
-  inputControl$ = new ReplaySubject<any>(2);
+  cancel$ = new Subject<any>();
 
-  // re-direct state to create feedback loop
-  stateFeedback$ = new Subject<any>();
+  // input event
+  inputEvent$ = new Subject<any>();
 
-  // side-effect
-  selectedProductActuator$ = this.stateFeedback$.pipe(
+  // output port
+  output$ = new ReplaySubject<any>(1);
+
+  // side-effect, open loop, no feedback
+  selectedProductActuator$ = this.output$.pipe(
     distinctUntilChanged(
       (oldState, newState) => (
         oldState.selectedProductId === newState.selectedProductId
@@ -54,9 +47,17 @@ export class ProductListComponent implements OnInit {
         this.productService.changeSelectedProduct(productId);
       }
     }),
-    mapTo({})   // open loop, no feedback
+    skipWhile(() => true)
   );
 
+  // Read the parameter from the route - supports deep linking.
+  // Selected product id that comes from the route parameter.
+  productIdFromRoute$ = this.route.paramMap.pipe(
+    map(params => +params.get('id')),
+    map(productId => ({type: 'selectedProductId', value: productId}))
+  );
+
+  // Selected product id that comes from the service.
   selectedProductId$ = this.productService.selectedProduct$.pipe(
     filter(product => !!product),
     map(product => ({type: 'selectedProductId', value: product.id}))
@@ -66,26 +67,25 @@ export class ProductListComponent implements OnInit {
   products$ = this.productService.productsWithCategory$.pipe(
     map(products => ({type: 'products', value: products})),
     catchError(error => {
-      this.inputControl$.next({error});
+      this.inputEvent$.next({error});
       return of(null);
   }));
 
-  // collect all events
-  inputEvent$ = merge(
-    this.inputControl$,
+  // all inputs
+  input$ = merge(
+    this.inputEvent$,
     this.products$,
     this.selectedProductId$,
     this.selectedProductActuator$,
   );
 
-  // reduce state from event stream
-  state$ = this.inputEvent$.pipe(
-    scan<any,any>(nextState, {}),
-    tap((state) => this.stateFeedback$.next(state))
+  // state reduced from inputs
+  state$ = this.input$.pipe(
+    scan<any,any>(nextState, {})
   );
 
   // transform state to view for display
-  view$ = this.state$.pipe(map(state => {
+  view$ = this.output$.pipe(map(state => {
     const selectedId = state.selectedProductId;
     const products = state.products || [];
     const productViews = products.map(product => ({
@@ -99,7 +99,7 @@ export class ProductListComponent implements OnInit {
       error: state.error,
       products: productViews
     };
-  });
+  }));
 
   constructor(
     private route: ActivatedRoute,
@@ -108,17 +108,28 @@ export class ProductListComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    this.inputControl$.next({type: 'pageTitle', value: 'Products'});
+    this.state$.pipe(
+      takeUntil(this.cancel$)
+    ).subscribe(this.output$);
 
-    // Read the parameter from the route - supports deep linking
-    this.route.paramMap.subscribe(params => {
-      const id = +params.get('id');
-      this.inputControl$.next({type: 'selectedProductId', value: id});
+    this.productIdFromRoute$.pipe(
+      takeUntil(this.cancel$)
+    ).subscribe(this.inputEvent$);
+
+    this.inputEvent$.next({
+      type: 'pageTitle', value: 'Products'
     });
   }
 
+  ngOnDestroy(): void {
+    this.cancel$.next(true);
+    this.cancel$.complete();
+  }
+
   selectProduct(productId: number): void {
-    this.inputControl$.next({type: 'selectedProductId', value: productId});
+    this.inputEvent$.next({
+      type: 'selectedProductId', value: productId
+    });
   }
 
 }
