@@ -21,12 +21,15 @@ export class ProductListComponent implements OnInit, OnDestroy {
 
   selectedProductIdFromRoute$ = this.route.paramMap.pipe(
     map(params => +params.get('id')),
-    map(productId => ({type: 'selectedProductId', value: productId}))
+    map(productId => ({
+      type: 'selectedProductId', value: productId
+    }))
   );
 
   selectedProductIdFromService$ = this.productService.selectedProduct$.pipe(
-    filter(product => !!product),
-    map(product => ({type: 'selectedProductId', value: product.id}))
+    map(product => ({
+      type: 'selectedProductId', value: product.id
+    }))
   );
 
   selectedProductId$: Observable<any> = merge(
@@ -45,10 +48,10 @@ export class ProductListComponent implements OnInit, OnDestroy {
     const selectedId = state.selectedProductId;
     const products = state.products || [];
     const productViews = products.map(product => ({
-        id: product.id,
-        name: product.productName,
-        category: product.category,
-        ngClass: {active: (product.id === selectedId)},
+      id: product.id,
+      name: product.productName,
+      category: product.category,
+      ngClass: {active: (product.id === selectedId)},
     }));
     return {
       pageTitle: state.pageTitle,
