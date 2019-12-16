@@ -26,29 +26,11 @@ export class ProductListComponent implements OnInit, OnDestroy {
 
   cancel$ = new Subject<any>();
 
-  // input event
-  inputEvent$ = new Subject<any>();
+  // input port for external events
+  inputPort$ = new Subject<any>();
 
   // output port
   output$ = new ReplaySubject<any>(1);
-
-  // side-effect, open loop, no feedback
-  selectedProductActuator$ = this.output$.pipe(
-    distinctUntilChanged(
-      (oldState, newState) => (
-        oldState.selectedProductId === newState.selectedProductId
-      )
-    ),
-    tap((state) => {
-      const productId = state.selectedProductId;
-      if (productId) {
-        // Modify the URL to support deep linking
-        this.router.navigate(['/products', productId]);
-        this.productService.changeSelectedProduct(productId);
-      }
-    }),
-    skipWhile(() => true)
-  );
 
   // Read the parameter from the route - supports deep linking.
   // Selected product id that comes from the route parameter.
@@ -67,17 +49,35 @@ export class ProductListComponent implements OnInit, OnDestroy {
   products$ = this.productService.productsWithCategory$.pipe(
     map(products => ({type: 'products', value: products})),
     catchError(error => {
-      this.inputEvent$.next({error});
+      this.inputPort$.next({error});
       return of(null);
   }));
 
+  // side-effect, open loop, no feedback
+  selectProductAction$ = this.output$.pipe(
+    distinctUntilChanged(
+      (oldState, newState) => (
+        oldState.selectedProductId === newState.selectedProductId
+      )
+    ),
+    tap((state) => {
+      const productId = state.selectedProductId;
+      if (productId) {
+        // Modify the URL to support deep linking
+        this.router.navigate(['/products', productId]);
+        this.productService.changeSelectedProduct(productId);
+      }
+    }),
+    skipWhile(() => true)   // no feedback
+  );
+
   // all inputs
   input$ = merge(
-    this.inputEvent$,
+    this.inputPort$,
     this.products$,
-    this.selectedProductId$,
     this.productIdFromRoute$,
-    this.selectedProductActuator$,
+    this.selectedProductId$,
+    this.selectProductAction$,
   );
 
   // state reduced from inputs
@@ -113,7 +113,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
       takeUntil(this.cancel$)
     ).subscribe(this.output$);
 
-    this.inputEvent$.next({
+    this.inputPort$.next({
       type: 'pageTitle', value: 'Products'
     });
   }
@@ -124,7 +124,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
   }
 
   selectProduct(productId: number): void {
-    this.inputEvent$.next({
+    this.inputPort$.next({
       type: 'selectedProductId', value: productId
     });
   }
