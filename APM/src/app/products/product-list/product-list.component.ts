@@ -27,6 +27,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
   );
 
   selectedProductIdFromService$ = this.productService.selectedProduct$.pipe(
+    filter(product => !!product),
     map(product => ({
       type: 'selectedProductId', value: product.id
     }))
