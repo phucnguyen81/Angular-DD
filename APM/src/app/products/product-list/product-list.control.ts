@@ -14,21 +14,21 @@ import { nextState } from './product-list.state';
 export class ProductListControl {
 
   // input port for external events
-  inputPort$ = new Subject<any>();
+  input$ = new Subject<any>();
 
   // state as output
-  output$ = new ReplaySubject<any>(1);
+  stateLoop$ = new Subject<any>();
 
   // products combined with their categories
   products$ = this.productService.productsWithCategory$.pipe(
     map(products => ({type: 'products', value: products})),
     catchError(error => {
-      this.inputPort$.next({error});
+      this.input$.next({error});
       return of(null);
   }));
 
   // side-effect, open loop, no feedback
-  selectedProductAction$ = this.output$.pipe(
+  selectedProductAction$ = this.stateLoop$.pipe(
     distinctUntilChanged(
       (oldState, newState) => (
         oldState.selectedProductId === newState.selectedProductId
@@ -38,17 +38,15 @@ export class ProductListControl {
     skipWhile(() => true)   // no feedback
   );
 
-  // all inputs
-  input$ = merge(
-    this.inputPort$,
+  // state reduced from inputs
+  state$ = merge(
+    this.input$,
     this.products$,
     this.selectedProductId$,
     this.selectedProductAction$,
-  );
-
-  // state reduced from inputs
-  state$ = this.input$.pipe(
-    scan<any,any>(nextState, {})
+  ).pipe(
+    scan<any,any>(nextState, {}),
+    tap(state => this.stateLoop$.next(state))
   );
 
   constructor(
@@ -57,22 +55,12 @@ export class ProductListControl {
     private doOnSelectedProduct: (number) => void
   ) { }
 
-  initUntil(cancel$: Observable<any>): void {
-    this.state$.pipe(
-      takeUntil(cancel$)
-    ).subscribe(this.output$);
-
-    this.inputPort$.next({
-      type: 'pageTitle', value: 'Products'
-    });
-  }
-
   send(type: string, value: any): void {
-    this.inputPort$.next({type, value});
+    this.input$.next({type, value});
   }
 
   selectProduct(productId: number): void {
-    this.inputPort$.next({
+    this.input$.next({
       type: 'selectedProductId', value: productId
     });
   }

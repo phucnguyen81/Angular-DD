@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, OnDestroy, ChangeDetectionStrategy
+  Component, ChangeDetectionStrategy, AfterViewInit
 } from '@angular/core';
 
 import { Router, ActivatedRoute } from '@angular/router';
@@ -15,9 +15,7 @@ import { ProductListControl } from './product-list.control';
   templateUrl: './product-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProductListComponent implements OnInit, OnDestroy {
-
-  cancel$ = new Subject<any>();
+export class ProductListComponent implements AfterViewInit {
 
   selectedProductIdFromRoute$ = this.route.paramMap.pipe(
     map(params => +params.get('id')),
@@ -45,7 +43,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
   );
 
   // Transform state to view for display
-  view$ = this.productList$.output$.pipe(map(state => {
+  view$ = this.productList$.state$.pipe(map(state => {
     const selectedId = state.selectedProductId;
     const products = state.products || [];
     const productViews = products.map(product => ({
@@ -64,17 +62,11 @@ export class ProductListComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private productService: ProductService
+    private productService: ProductService,
   ) { }
 
-  ngOnInit(): void {
-    this.productList$.initUntil(this.cancel$);
+  ngAfterViewInit(): void {
     this.productList$.send('pageTitle', 'Products');
-  }
-
-  ngOnDestroy(): void {
-    this.cancel$.next(true);
-    this.cancel$.complete();
   }
 
   selectProduct(productId: number): void {
