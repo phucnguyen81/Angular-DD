@@ -54,7 +54,7 @@ export class ProductListControl {
   constructor(
     private productService: ProductService,
     private selectedProductId$: Observable<any>,
-    private doOnSelectedProduct: number => void
+    private doOnSelectedProduct: (number) => void
   ) { }
 
   initUntil(cancel$: Observable<any>): void {
