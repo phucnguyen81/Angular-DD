@@ -36,8 +36,12 @@ export class ProductListComponent implements AfterViewInit {
     this.selectedProductIdFromService$
   );
 
+  products$ = this.productService.productsWithCategory$.pipe(
+    map(products => ({type: 'products', value: products}))
+  );
+
   productList$ = new ProductListControl(
-    this.productService,
+    this.products$,
     this.selectedProductId$,
     (productId: number) => this.doOnSelectedProduct(productId)
   );
