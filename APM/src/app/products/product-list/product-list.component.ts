@@ -9,6 +9,7 @@ import { filter, map } from 'rxjs/operators';
 
 import { ProductService } from '../product.service';
 import { ProductListControl } from './product-list.control';
+import { ProductListState } from './product-list.state';
 
 @Component({
   selector: 'pm-product-list',
@@ -47,21 +48,7 @@ export class ProductListComponent implements AfterViewInit {
   );
 
   // Transform state to view for display
-  view$ = this.productList$.state$.pipe(map(state => {
-    const selectedId = state.selectedProductId;
-    const products = state.products || [];
-    const productViews = products.map(product => ({
-      id: product.id,
-      name: product.productName,
-      category: product.category,
-      ngClass: {active: (product.id === selectedId)},
-    }));
-    return {
-      pageTitle: state.pageTitle,
-      error: state.error,
-      products: productViews
-    };
-  }));
+  view$ = this.productList$.state$.pipe(map(fromStateToView));
 
   constructor(
     private route: ActivatedRoute,
@@ -86,3 +73,21 @@ export class ProductListComponent implements AfterViewInit {
   }
 
 }
+
+// Convert state to match template structure
+function fromStateToView(state: ProductListState): any {
+  const selectedId = state.selectedProductId;
+  const products = state.products || [];
+  const productViews = products.map(product => ({
+    id: product.id,
+    name: product.productName,
+    category: product.category,
+    ngClass: {active: (product.id === selectedId)},
+  }));
+  return {
+    pageTitle: state.pageTitle,
+    error: state.error,
+    products: productViews
+  };
+}
+

@@ -7,7 +7,7 @@ import {
   scan, takeUntil, skipWhile
 } from 'rxjs/operators';
 
-import { nextState } from './product-list.state';
+import { ProductListState, nextState } from './product-list.state';
 
 export class ProductListControl {
 
@@ -15,7 +15,7 @@ export class ProductListControl {
   input$ = new Subject<any>();
 
   // state as output
-  stateLoop$ = new Subject<any>();
+  stateLoop$ = new Subject<ProductListState>();
 
   // products combined with their categories
   products$ = this.productsInput$.pipe(
@@ -36,20 +36,20 @@ export class ProductListControl {
   );
 
   // state reduced from inputs
-  state$ = merge(
+  state$: Observable<ProductListState> = merge(
     this.input$,
     this.products$,
     this.selectedProductId$,
     this.selectedProductAction$,
   ).pipe(
-    scan<any,any>(nextState, {}),
+    scan<ProductListState,any>(nextState, {}),
     tap(state => this.stateLoop$.next(state))
   );
 
   constructor(
     private productsInput$: Observable<any>,
     private selectedProductId$: Observable<any>,
-    private doOnSelectedProduct: (number) => void
+    private doOnSelectedProduct: (number | null) => void
   ) { }
 
   send(type: string, value: any): void {

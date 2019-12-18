@@ -1,18 +1,22 @@
 import { Product } from '../product';
 
-const DEFAULT_INITIAL_STATE: {
+export interface ProductListState {
   pageTitle: string;
   error: string;
   products: Product[];
   selectedProductId: number | null;
-} = {
+}
+
+const DEFAULT_INITIAL_STATE: ProductListState = {
   pageTitle: '?',
   error: '',
   products: [],
   selectedProductId: null,
 };
 
-export function nextState(state, event): any {
+export function nextState(
+  state: ProductListState, event: any
+): ProductListState {
   switch(event.type) {
     case 'init':
       return {...state, ...DEFAULT_INITIAL_STATE, ...event.value};
